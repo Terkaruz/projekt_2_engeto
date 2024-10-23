@@ -10,6 +10,9 @@ discord: terka_99
 
 import random
 import time
+import json
+import os
+import math
 
 def print_line_separator():
     print(47 * "-")
@@ -78,21 +81,24 @@ def count_bulls_cows(secret_number, user_number):
     """Counts the number of bulls and cows based on the user's guess."""
     bull_count = 0
     cow_count = 0
-    secret_used = [False] * 4
-    user_used = [False] * 4
+    secret_number_used_pos = set()
+    user_number_used_pos = set()
+
     for i in range(4):
         if secret_number[i] == user_number[i]:
             bull_count += 1
-            secret_used[i] = True
-            user_used[i] = True
+            secret_number_used_pos.add(i)
+            user_number_used_pos.add(i)
+
     for j in range(4):
-        if not user_used[j]:
+        if j not in user_number_used_pos:
             for k in range(4):
-                if not secret_used[k] and user_number[j] == secret_number[k]:
+                if k not in secret_number_used_pos and user_number[j] == secret_number[k]:
                     cow_count += 1
-                    secret_used[k] = True
+                    secret_number_used_pos.add(k)
                     break
     return bull_count, cow_count
+
 
 
 # výpis počtu bulls a cows se zprávnou koncovkou
@@ -104,20 +110,80 @@ def print_results(bull_count, cow_count):
     print(f"{bull_count} {bull_word}, {cow_count} {cow_word}")
 
 
+def load_statistics():
+    json_file = open("game_statistics.json", mode="r")
+    statistics_json = json.load(json_file)
+    json_file.close()
+
+    return statistics_json
+
+
+def save_statistics(statistics_json):
+    json_file = open("game_statistics.json", mode="w")
+    json.dump(statistics_json, json_file)
+    json_file.close()
+
+
+def init_statistics():
+    if not os.path.exists("game_statistics.json"):
+        init_statistics_json = {
+            "totalGamesFinished": 0,
+            "totalGuessesCount": 0,
+            "totalGameTime": 0,
+            "worstGuessesCount": 0,
+            "worstGameTime": 0,
+            "bestGuessesCount": 0,
+            "bestGameTime": 0,
+            "averageGuessesCount": 0,
+            "averageGameTime": 0
+        }
+        save_statistics(init_statistics_json)
+
+def update_statistics(guesses_count, elapsed_time):
+    if guesses_count > 0 and elapsed_time > 0:
+        statistics_json = load_statistics()
+    
+        statistics_json["totalGamesFinished"] += 1
+        statistics_json["totalGuessesCount"] += guesses_count
+        statistics_json["totalGameTime"] += elapsed_time
+
+        if statistics_json["worstGuessesCount"] <= 0 or guesses_count > statistics_json["worstGuessesCount"]:
+            statistics_json["worstGuessesCount"] = guesses_count
+        
+        if statistics_json["bestGuessesCount"] <= 0 or guesses_count < statistics_json["bestGuessesCount"]:
+            statistics_json["bestGuessesCount"] = guesses_count
+        
+        if statistics_json["worstGameTime"] <= 0 or elapsed_time > statistics_json["worstGameTime"]:
+            statistics_json["worstGameTime"] = elapsed_time
+        
+        if statistics_json["bestGameTime"] <= 0 or elapsed_time < statistics_json["bestGameTime"]:
+            statistics_json["bestGameTime"] = elapsed_time
+        
+        statistics_json["averageGuessesCount"] = math.ceil(statistics_json["totalGuessesCount"] / statistics_json["totalGamesFinished"])
+        statistics_json["averageGameTime"] = math.ceil(statistics_json["totalGameTime"] / statistics_json["totalGamesFinished"])
+
+        save_statistics(statistics_json)
+
 # zhodnocení výsledku
 
 def evaluation(guesses_count, elapsed_time):
-    if guesses_count in range(1,5) and elapsed_time in range(0, 301):
-        eval_word = "amazing"
-    elif guesses_count in range(5, 10) and elapsed_time in range(0, 301):
-        eval_word = "average"
-    elif guesses_count in range (10, 20) and elapsed_time in range(0, 301):
-        eval_word = "not so good"
+    statistics_json = load_statistics()
+    avg_guesses_count = statistics_json["averageGuessesCount"]
+    avg_game_time = statistics_json["averageGameTime"]
+
+    if avg_guesses_count > 0 and avg_game_time > 0:
+        if guesses_count == avg_guesses_count and elapsed_time <= avg_game_time:
+            eval_word = "average"
+        elif guesses_count < avg_guesses_count and elapsed_time <= avg_game_time:
+            eval_word = "amazing"
+        elif guesses_count > avg_guesses_count and elapsed_time <= avg_game_time:
+            eval_word = "not so good"
+        else:
+             eval_word = "bad"
     else:
-        eval_word = "bad"
+        eval_word = "amazing"
+    
     return eval_word
-
-
 
 
 # #############################################################
@@ -126,6 +192,7 @@ def evaluation(guesses_count, elapsed_time):
 
 def main():
     print_welcome()
+    init_statistics()
     secret_number = generate_number()
     bull_count = 0
     guesses_count = 0
@@ -146,6 +213,7 @@ def main():
     print_line_separator()
     eval_word = evaluation(guesses_count, elapsed_time)
     print(f"That's {eval_word}!")
+    update_statistics(guesses_count, elapsed_time)
     print_line_separator()
 
 
