@@ -5,14 +5,22 @@ author: Tereza Růžičková
 email: terkaruzicka@seznam.cz
 discord: terka_99
 """
+# v Pythonu používám snake_case, ale v dokumentaci jsem si přečetla, že JSON se používá s camelCase, proto ten nejednotný styl
+
 # knihovna random pro generování náhodných čísel
-# knihovna time pro meěření času hádání
+# knihovna time pro měření času hádání
+# knihovna json pro zaznaměnávání statistik hry do zvláštního souboru
+# knihovna os pro uložení nového JSON souboru
+# knihovna math pro provádění výpočtů
 
 import random
 import time
 import json
 import os
 import math
+
+
+# funkce pro výpis separátoru mezi jednotlivými bloky hry
 
 def print_line_separator():
     print(47 * "-")
@@ -31,7 +39,7 @@ def print_welcome():
     print_line_separator()
 
 
-# generace náhodného čtyřmístného čísla
+# funkce pro generování náhodného čtyřmístného čísla
 # while cyklus se opakuje dokud se nevygeneruje čtyřmístné číslo s unikátními číslicemi
 
 def generate_number():
@@ -48,16 +56,16 @@ def generate_number():
     return ran_num_list
 
 
-# uživatelský vstup
+# funkce pro získání uživatelského vstupu
 
 def get_user_input():
-    """Gets user input nd prints it"""
+    """Gets user input and prints it"""
     user_input = input(">>> ")
     return user_input
 
 
-# validace uživatelského vstupu
-# ověří, že ve vstup obsahuje 4 číslice, neobsauje nečíselné znaky, nezačíná nulou, které jsou unikátní
+# funkce pro validaci uživatelského vstupu
+# ověří, že vstup obsahuje 4 číslice, neobsauje nečíselné znaky, nezačíná nulou a obsahuje jen číslice, které jsou unikátní
 
 def is_valid(value):
     """Validates the user's input."""
@@ -75,21 +83,20 @@ def is_valid(value):
         return False
     return True
 
-# počítání bulls a cows
+
+# funkce, která počítá bulls a cows na základě uživatelského vstupu
 
 def count_bulls_cows(secret_number, user_number):
-    """Counts the number of bulls and cows based on the user's guess."""
+    """Counts the number of bulls and cows based on user's guess."""
     bull_count = 0
     cow_count = 0
     secret_number_used_pos = set()
     user_number_used_pos = set()
-
     for i in range(4):
         if secret_number[i] == user_number[i]:
             bull_count += 1
             secret_number_used_pos.add(i)
             user_number_used_pos.add(i)
-
     for j in range(4):
         if j not in user_number_used_pos:
             for k in range(4):
@@ -100,8 +107,7 @@ def count_bulls_cows(secret_number, user_number):
     return bull_count, cow_count
 
 
-
-# výpis počtu bulls a cows se zprávnou koncovkou
+# funkce pro výpis počtu bulls a cows se zprávnou koncovkou
 
 def print_results(bull_count, cow_count):
     """Prints the results based on the counts of bulls and cows."""
@@ -110,21 +116,29 @@ def print_results(bull_count, cow_count):
     print(f"{bull_count} {bull_word}, {cow_count} {cow_word}")
 
 
+# funkce pro načtení herních statistik
+
 def load_statistics():
+    """Opens a JSON file and reads its contents"""
     json_file = open("game_statistics.json", mode="r")
     statistics_json = json.load(json_file)
     json_file.close()
-
     return statistics_json
 
 
+# funkce pro uložení herních statistik
+
 def save_statistics(statistics_json):
+    """Saves a dictionary of game statistics as JSON data"""
     json_file = open("game_statistics.json", mode="w")
     json.dump(statistics_json, json_file)
     json_file.close()
 
 
+# funkce pro kontrolu, jestli soubor se statistikami již existuje, a pokud ne, tak ho vytvoří
+
 def init_statistics():
+    """Checks if the file game_statistics.json exists, if not it creates the file with initial game statistics set to zero"""
     if not os.path.exists("game_statistics.json"):
         init_statistics_json = {
             "totalGamesFinished": 0,
@@ -139,7 +153,12 @@ def init_statistics():
         }
         save_statistics(init_statistics_json)
 
+
+# funkce pro update herních statistik (zapisuje se počet odehraných her, celkový počet hádání, celkový čas, chybné hádání, správné hádání)
+# nakonec se vypočítá průměr počtu hádání a průměrný čas, za který se podařilo číslo uhádnout
+
 def update_statistics(guesses_count, elapsed_time):
+    """Updates and saves cumulative game statistics, including totals, bests, worsts, and averages, based on the latest game’s guesses and time"""
     if guesses_count > 0 and elapsed_time > 0:
         statistics_json = load_statistics()
     
@@ -164,13 +183,14 @@ def update_statistics(guesses_count, elapsed_time):
 
         save_statistics(statistics_json)
 
-# zhodnocení výsledku
+
+# funkce pro zhodnocení výsledku podle uložených statistik hry
 
 def evaluation(guesses_count, elapsed_time):
+    """Compares a game's performance to average statistics, returning an evaluation word"""
     statistics_json = load_statistics()
     avg_guesses_count = statistics_json["averageGuessesCount"]
     avg_game_time = statistics_json["averageGameTime"]
-
     if avg_guesses_count > 0 and avg_game_time > 0:
         if guesses_count == avg_guesses_count and elapsed_time <= avg_game_time:
             eval_word = "average"
@@ -182,23 +202,22 @@ def evaluation(guesses_count, elapsed_time):
              eval_word = "bad"
     else:
         eval_word = "amazing"
-    
     return eval_word
 
 
 # #############################################################
 
-#hlavní funkce, ve které volám předem vytvořené podfunkce
+
+# hlavní funkce, která volá předem vytvořené podfunkce
 
 def main():
+    """Runs the guessing game loop, tracks guesses and time, evaluates performance, updates statistics, and provides feedback to the player"""
     print_welcome()
     init_statistics()
     secret_number = generate_number()
     bull_count = 0
     guesses_count = 0
-
     start_time = time.time()
-
     while bull_count != 4:
         user_input = get_user_input()
         if is_valid(user_input):
@@ -208,14 +227,12 @@ def main():
             guesses_count +=1
     end_time = time.time()
     elapsed_time = end_time - start_time
-
     print(f"Correct, you've guessed the right number in {guesses_count} guesses and in {elapsed_time:.2f} seconds!")
     print_line_separator()
     eval_word = evaluation(guesses_count, elapsed_time)
     print(f"That's {eval_word}!")
     update_statistics(guesses_count, elapsed_time)
     print_line_separator()
-
 
 
 if __name__ == "__main__":
